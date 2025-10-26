@@ -88,29 +88,38 @@ export default function BuildingSelector({ selectedBuilding, onChange, selectedP
                             <div className="size-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
                         </div>
                     ) : nearestParking.length > 0 ? (
-                        <div className="grid gap-2 sm:grid-cols-1">
+                        <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
                             {nearestParking.map((parking, index) => (
                                 <div
                                     key={`${parking.type}-${parking.id}`}
-                                    className="flex flex-col gap-2 rounded-md bg-white p-3 shadow-sm dark:bg-gray-800 sm:flex-row sm:items-center sm:justify-between"
+                                    className="flex flex-col rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800"
                                 >
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            {index === 0 && (
-                                                <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-bold text-white">
-                                                    CLOSEST
-                                                </span>
-                                            )}
-                                            <span className="font-medium text-gray-900 dark:text-white">
+                                    <div className="mb-3 flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                            <div className="mb-1 flex items-center gap-2">
+                                                {index === 0 && (
+                                                    <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-bold text-white">
+                                                        CLOSEST
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">
                                                 {parking.name}
-                                            </span>
+                                            </h4>
                                         </div>
-                                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
-                                            <span>📍 {parking.distance_feet}ft away</span>
-                                            <span>🚶 {parking.walk_time_minutes} min walk</span>
-                                            <span className="font-medium text-green-600 dark:text-green-400">
-                                                {parking.available_spots} spots available
-                                            </span>
+                                    </div>
+                                    <div className="mb-3 flex flex-col gap-2 text-sm">
+                                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                            <span>📍</span>
+                                            <span>{parking.distance_feet}ft away</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                            <span>🚶</span>
+                                            <span>{parking.walk_time_minutes} min walk</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 font-semibold text-green-600 dark:text-green-400">
+                                            <span>🅿️</span>
+                                            <span>{parking.available_spots} spots available</span>
                                         </div>
                                     </div>
                                     <button
@@ -118,7 +127,7 @@ export default function BuildingSelector({ selectedBuilding, onChange, selectedP
                                             const url = `https://www.google.com/maps/dir/?api=1&destination=${parking.latitude},${parking.longitude}`;
                                             window.open(url, '_blank');
                                         }}
-                                        className="ml-3 rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
+                                        className="w-full rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
                                     >
                                         Navigate
                                     </button>

@@ -111,11 +111,9 @@ export default function ParkingMap() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                                🅿️ ParkUTSA
+                                Dashboard
                             </h1>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Real-time campus parking availability
-                            </p>
+    
                         </div>
                         <div className="text-right">
                             <button
@@ -148,7 +146,7 @@ export default function ParkingMap() {
                 <div className="space-y-4">
                     {/* Permit & Building Selectors */}
                     <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-4">
                             <PermitSelector selectedPermit={selectedPermit} onChange={handlePermitChange} />
                             <BuildingSelector
                                 selectedBuilding={selectedBuilding}
@@ -301,7 +299,7 @@ export default function ParkingMap() {
             {/* Footer */}
             <footer className="mt-12 bg-white py-6 shadow dark:bg-gray-800">
                 <div className="mx-auto max-w-7xl px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                    <p>ParkUTSA - Smart Campus Parking System</p>
+                    <p>UTSAFindMySpot - Smart Campus Parking System</p>
                     <p className="mt-1">Real-time data from cameras, GPS, and entry/exit sensors</p>
                 </div>
             </footer>

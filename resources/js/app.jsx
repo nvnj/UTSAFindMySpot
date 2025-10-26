@@ -9,8 +9,13 @@ function App() {
         <Router>
             <nav className="bg-blue-600 p-4 text-white shadow-md">
                 <div className="container mx-auto flex items-center justify-between">
-                    <Link to="/" className="text-xl font-bold">
-                        ParkUTSA
+                    <Link to="/" className="flex items-center gap-3">
+                        <img
+                            src="/findmyspot.png"
+                            alt="UTSAFindMySpot Logo"
+                            className="h-10 w-10 rounded-lg"
+                        />
+                        <span className="text-xl font-bold">UTSAFindMySpot</span>
                     </Link>
                     <div className="flex gap-4">
                         <Link
