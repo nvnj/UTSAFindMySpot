@@ -7,14 +7,16 @@ const SpotCell = ({ spot, onClick }) => {
         return 'bg-green-500 hover:bg-green-600';
     };
 
+    const spotId = spot.spot_number.split('-')[1];
+
     return (
         <div
             className={`group relative flex aspect-square cursor-pointer items-center justify-center rounded transition-all ${getSpotColor()}`}
             onClick={() => !spot.occupied && onClick(spot)}
             title={`Spot ${spot.spot_number} - ${spot.occupied ? 'Occupied' : 'Available'}`}
         >
-            <span className="text-[10px] font-semibold text-white opacity-0 group-hover:opacity-100">
-                {spot.spot_number.split('-')[1]}
+            <span className="text-sm font-bold text-white drop-shadow-lg">
+                {spotId}
             </span>
             {!spot.occupied && (
                 <div className="absolute -top-1 -right-1 size-2 animate-pulse rounded-full bg-white"></div>

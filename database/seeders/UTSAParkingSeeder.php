@@ -22,7 +22,8 @@ class UTSAParkingSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         // Commuter Lots (C permit) - space_type: 'commuter'
-        $this->createLot('BK1', 'Brackenridge Avenue Lot 1', 'Near Recreation Wellness Center', 29.581394618982845, -98.62079982090208, 120, 'open', 'commuter');
+        // BK1 - Demo lot with 12 spots in straight line layout
+        $this->createLot('BK1', 'Brackenridge Avenue Lot 1', 'Near Recreation Wellness Center', 29.581394618982845, -98.62079982090208, 12, 'open', 'commuter', true, 'straight');
         $this->createLot('BK2', 'Brackenridge Avenue Lot 2', 'Near Recreation Wellness Center', 29.580429282840427, -98.62194811362839, 100, 'open', 'commuter');
         $this->createLot('BK4', 'Brackenridge Avenue Lot 4', 'Near Recreation Wellness Center', 29.579297497675142, -98.62612024386732, 85, 'open', 'commuter');
         $this->createLot('BK5', 'Brackenridge Avenue Lot 5', 'Near Recreation Wellness Center', 29.578665007826892, -98.6288176362348, 75, 'open', 'commuter');
@@ -61,10 +62,8 @@ class UTSAParkingSeeder extends Seeder
         $this->command->info('UTSA parking lots and garages seeded with correct coordinates!');
     }
 
-    private function createLot(string $code, string $name, string $location, float $lat, float $lng, int $totalSpots, string $type, string $spaceType, bool $isActive = true): void
+    private function createLot(string $code, string $name, string $location, float $lat, float $lng, int $totalSpots, string $type, string $spaceType, bool $isActive = true, string $layout = 'default'): void
     {
-        $availableSpots = $isActive ? rand((int) ($totalSpots * 0.2), (int) ($totalSpots * 0.7)) : 0;
-
         $lot = Lot::create([
             'lot_code' => $code,
             'name' => $name,
@@ -72,27 +71,39 @@ class UTSAParkingSeeder extends Seeder
             'latitude' => $lat,
             'longitude' => $lng,
             'total_spots' => $totalSpots,
-            'available_spots' => $availableSpots,
+            'available_spots' => $totalSpots, // Will be updated based on actual spots
             'type' => $type,
             'space_type' => $spaceType,
             'is_active' => $isActive,
         ]);
 
-        // Create 20 sample spots per lot for layout visualization
-        for ($i = 1; $i <= 20; $i++) {
+        $occupiedCount = 0;
+
+        // Create all spots for the lot
+        for ($i = 1; $i <= $totalSpots; $i++) {
+            // For demo lots (straight layout), start all empty
+            // For regular lots, randomize occupancy
+            $isOccupied = ($layout === 'straight') ? false : (rand(0, 100) > 60);
+
+            if ($isOccupied) {
+                $occupiedCount++;
+            }
+
             Spot::create([
                 'lot_id' => $lot->id,
                 'spot_number' => "{$code}-{$i}",
-                'occupied' => rand(0, 100) > 40,
-                'last_updated_at' => now()->subMinutes(rand(1, 60)),
+                'occupied' => $isOccupied,
+                'last_updated_at' => now()->subMinutes(rand(0, 60)),
             ]);
         }
+
+        // Update lot's available_spots to match actual spot occupancy
+        $actualAvailable = $isActive ? ($totalSpots - $occupiedCount) : 0;
+        $lot->update(['available_spots' => $actualAvailable]);
     }
 
     private function createGarage(string $code, string $name, string $location, float $lat, float $lng, int $levels, int $totalSpots, string $spaceType): void
     {
-        $availableSpots = rand((int) ($totalSpots * 0.3), (int) ($totalSpots * 0.6));
-
         $garage = Garage::create([
             'garage_code' => $code,
             'name' => $name,
@@ -101,22 +112,34 @@ class UTSAParkingSeeder extends Seeder
             'longitude' => $lng,
             'levels' => $levels,
             'total_spots' => $totalSpots,
-            'available_spots' => $availableSpots,
+            'available_spots' => $totalSpots, // Will be updated based on actual spots
             'space_type' => $spaceType,
             'is_active' => true,
         ]);
 
-        // Create spots for each level (30 spots per level for visualization)
+        $occupiedCount = 0;
+        $spotsPerLevel = (int) ceil($totalSpots / $levels);
+
+        // Create spots for each level
         for ($level = 1; $level <= $levels; $level++) {
-            for ($i = 1; $i <= 30; $i++) {
+            for ($i = 1; $i <= $spotsPerLevel; $i++) {
+                $isOccupied = rand(0, 100) > 60;
+                if ($isOccupied) {
+                    $occupiedCount++;
+                }
+
                 Spot::create([
                     'garage_id' => $garage->id,
                     'spot_number' => "{$code}-L{$level}-{$i}",
                     'level' => $level,
-                    'occupied' => rand(0, 100) > 50,
-                    'last_updated_at' => now()->subMinutes(rand(1, 60)),
+                    'occupied' => $isOccupied,
+                    'last_updated_at' => now()->subMinutes(rand(0, 60)),
                 ]);
             }
         }
+
+        // Update garage's available_spots to match actual spot occupancy
+        $actualAvailable = $totalSpots - $occupiedCount;
+        $garage->update(['available_spots' => $actualAvailable]);
     }
 }

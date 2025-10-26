@@ -13,7 +13,9 @@ class VehicleCountController extends Controller
     {
         $validated = $request->validate([
             'lot_code' => 'required|string|exists:lots,lot_code',
-            'vehicle_count' => 'required|integer|min:0',
+            'vehicle_count' => 'nullable|integer|min:0',
+            'occupied_spots' => 'nullable|array',
+            'occupied_spots.*' => 'integer|min:1',
             'camera_id' => 'nullable|string',
             'timestamp' => 'nullable|date',
         ]);
@@ -27,10 +29,44 @@ class VehicleCountController extends Controller
             ], 404);
         }
 
-        // Calculate available spots based on vehicle count
-        $occupiedSpots = min($validated['vehicle_count'], $lot->total_spots);
-        $availableSpots = max(0, $lot->total_spots - $occupiedSpots);
+        // Get all spots for this lot
+        $spots = $lot->spots()
+            ->orderByRaw('CAST(SUBSTRING(spot_number, LOCATE("-", spot_number) + 1) AS UNSIGNED)')
+            ->get();
 
+        // If occupied_spots list is provided, use that for precise control
+        if (isset($validated['occupied_spots'])) {
+            $occupiedSlotIds = $validated['occupied_spots'];
+
+            // Update each spot based on whether its ID is in the occupied list
+            foreach ($spots as $spot) {
+                // Extract spot number (e.g., "BK1-5" -> 5)
+                $spotNumber = (int) substr($spot->spot_number, strpos($spot->spot_number, '-') + 1);
+                $isOccupied = in_array($spotNumber, $occupiedSlotIds);
+
+                $spot->update([
+                    'occupied' => $isOccupied,
+                    'last_updated_at' => now(),
+                ]);
+            }
+
+            $occupiedCount = count($occupiedSlotIds);
+            $availableSpots = max(0, $lot->total_spots - $occupiedCount);
+        } else {
+            // Fallback to vehicle_count method (mark first N spots as occupied)
+            $occupiedCount = min($validated['vehicle_count'] ?? 0, $lot->total_spots);
+            $availableSpots = max(0, $lot->total_spots - $occupiedCount);
+
+            foreach ($spots as $index => $spot) {
+                $shouldBeOccupied = $index < $occupiedCount;
+                $spot->update([
+                    'occupied' => $shouldBeOccupied,
+                    'last_updated_at' => now(),
+                ]);
+            }
+        }
+
+        // Update lot available spots
         $lot->update([
             'available_spots' => $availableSpots,
         ]);
@@ -42,9 +78,9 @@ class VehicleCountController extends Controller
                 'code' => $lot->lot_code,
                 'name' => $lot->name,
                 'total_spots' => $lot->total_spots,
-                'available_spots' => $lot->available_spots,
-                'occupied_spots' => $occupiedSpots,
-                'vehicle_count' => $validated['vehicle_count'],
+                'available_spots' => $availableSpots,
+                'occupied_spots' => $occupiedCount,
+                'vehicle_count' => $occupiedCount,
             ],
         ]);
     }
