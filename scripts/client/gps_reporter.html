@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkUTSA GPS Reporter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #1a202c;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .location {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .location strong {
+            color: #2d3748;
+        }
+
+        .location span {
+            color: #718096;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-park {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-park:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+
+        .btn-unpark {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-unpark:hover {
+            background: #e53e3e;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            display: block;
+        }
+
+        .message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🅿️ ParkUTSA GPS Reporter</h1>
+        <p class="subtitle">Report your parking location to help others find spots</p>
+
+        <div class="form-group">
+            <label for="lotSelect">Select Parking Lot</label>
+            <select id="lotSelect">
+                <option value="">Loading lots...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="spotNumber">Spot Number (Optional)</label>
+            <input type="number" id="spotNumber" placeholder="Enter spot number if known">
+        </div>
+
+        <div class="location">
+            <strong>Your Location:</strong><br>
+            <span id="locationText">Waiting for GPS...</span>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-park" id="parkBtn" disabled>
+                Park Here
+            </button>
+            <button class="btn-unpark" id="unparkBtn" disabled>
+                Leave Spot
+            </button>
+        </div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost/api';
+        let currentPosition = null;
+
+        // Get user's location
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    currentPosition = position;
+                    document.getElementById('locationText').textContent =
+                        `Lat: ${position.coords.latitude.toFixed(6)}, ` +
+                        `Lng: ${position.coords.longitude.toFixed(6)}`;
+                    enableButtons();
+                },
+                (error) => {
+                    document.getElementById('locationText').textContent =
+                        `Error: ${error.message}`;
+                }
+            );
+        } else {
+            document.getElementById('locationText').textContent =
+                'GPS not supported by your browser';
+        }
+
+        // Load parking lots
+        async function loadLots() {
+            try {
+                const response = await fetch(`${API_URL}/lots`);
+                const data = await response.json();
+
+                const select = document.getElementById('lotSelect');
+                select.innerHTML = '<option value="">Select a lot...</option>';
+
+                data.data.forEach(lot => {
+                    const option = document.createElement('option');
+                    option.value = lot.id;
+                    option.textContent = `${lot.name} (${lot.available_spots}/${lot.total_spots} available)`;
+                    select.appendChild(option);
+                });
+
+                enableButtons();
+            } catch (error) {
+                showMessage('Failed to load parking lots', 'error');
+            }
+        }
+
+        function enableButtons() {
+            const lotSelected = document.getElementById('lotSelect').value !== '';
+            const hasLocation = currentPosition !== null;
+
+            if (lotSelected && hasLocation) {
+                document.getElementById('parkBtn').disabled = false;
+                document.getElementById('unparkBtn').disabled = false;
+            }
+        }
+
+        async function reportParking(parked) {
+            const lotId = document.getElementById('lotSelect').value;
+            const spotId = document.getElementById('spotNumber').value || null;
+
+            if (!lotId) {
+                showMessage('Please select a parking lot', 'error');
+                return;
+            }
+
+            const button = parked ? document.getElementById('parkBtn') : document.getElementById('unparkBtn');
+            const originalText = button.textContent;
+            button.innerHTML = '<span class="loading"></span>';
+            button.disabled = true;
+
+            try {
+                const payload = {
+                    lot_id: parseInt(lotId),
+                    spot_id: spotId ? parseInt(spotId) : null,
+                    parked: parked,
+                    latitude: currentPosition.coords.latitude,
+                    longitude: currentPosition.coords.longitude
+                };
+
+                const response = await fetch(`${API_URL}/update_gps`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(
+                        parked ? '✓ Parking location reported!' : '✓ Spot marked as available!',
+                        'success'
+                    );
+                    loadLots(); // Refresh lot availability
+                } else {
+                    showMessage('Failed to report parking status', 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type}`;
+
+            setTimeout(() => {
+                message.className = 'message';
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('lotSelect').addEventListener('change', enableButtons);
+        document.getElementById('parkBtn').addEventListener('click', () => reportParking(true));
+        document.getElementById('unparkBtn').addEventListener('click', () => reportParking(false));
+
+        // Initialize
+        loadLots();
+    </script>
+</body>
+</html>
